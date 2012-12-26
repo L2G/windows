@@ -1,0 +1,47 @@
+Bottom: 3fc6a3b97fdf670415b34b3674bc298e73a02db1
+Top:    d1a5c736d1eab11805df18c7ad0a6b7973e1560f
+Author: Larry Gilbert <larry@L2G.to>
+Date:   2012-12-26 14:57:21 -0800
+
+Add checksum (SHA256) support for windows_zipfile
+
+
+---
+
+diff --git a/README.md b/README.md
+index a19c7cd..21ef2a5 100644
+--- a/README.md
++++ b/README.md
+@@ -413,6 +413,7 @@ Most version of Windows do not ship with native cli utility for managing compres
+ - path: name attribute. The path where files will be unzipped to.
+ - source: The source of the zip file. This can either be a URI or a local path.
+ - overwrite: force an overwrite of the files if the already exists.
++- checksum: useful if source is remote, the SHA-256 checksum of the file--if the local file matches the checksum, Chef will not download it
+ 
+ ### Examples
+ 
+diff --git a/providers/zipfile.rb b/providers/zipfile.rb
+index d04d76a..44b3731 100644
+--- a/providers/zipfile.rb
++++ b/providers/zipfile.rb
+@@ -28,7 +28,7 @@ action :unzip do
+   ensure_rubyzip_gem_installed
+   Chef::Log.debug("unzip #{@new_resource.source} => #{@new_resource.path} (overwrite=#{@new_resource.overwrite})")
+ 
+-  Zip::ZipFile.open(cached_file(@new_resource.source)) do |zip|
++  Zip::ZipFile.open(cached_file(@new_resource.source, @new_resource.checksum)) do |zip|
+     zip.each do |entry|
+       path = ::File.join(@new_resource.path, entry.name)
+       FileUtils.mkdir_p(::File.dirname(path))
+diff --git a/resources/zipfile.rb b/resources/zipfile.rb
+index 8dad4a5..0265816 100644
+--- a/resources/zipfile.rb
++++ b/resources/zipfile.rb
+@@ -25,6 +25,7 @@ actions :unzip, :zip
+ attribute :path, :kind_of => String, :name_attribute => true
+ attribute :source, :kind_of => String
+ attribute :overwrite, :kind_of => [ TrueClass, FalseClass ], :default => false
++attribute :checksum, :kind_of => String
+ 
+ def initialize(name, run_context=nil)
+   super
